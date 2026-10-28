@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block body %}
+<div style="max-width:420px;margin:0 auto;min-height:100vh;background:var(--bg);box-shadow:0 0 20px #0002">
+  <div style="background:var(--navy);text-align:center;padding:20px 0 16px;color:#fff">
+    <div><img src="/logo/icct_lg.png" height="90" alt=""> <img src="/logo/ccs_lg.png" height="90" alt="" style="margin-left:14px"></div>
+    <div style="font-size:22px;font-weight:700;margin-top:8px">Student Concern System</div>
+    <div style="color:var(--gold)">ICCT Colleges Foundation Inc.</div>
+    <div style="color:var(--gold);font-weight:700">College of Computer Studies</div>
+  </div><div class="stripe"></div>
+  <div style="padding:24px 40px">
+    <label>Username</label><input id="lu" autofocus>
+    <label>Password</label><input id="lp" type="password">
+    <div class="err" id="le"></div>
+    <button class="btn red" style="width:100%;margin-top:8px" onclick="login()">LOGIN</button>
+    <button class="btn blue" style="width:100%;margin-top:8px" onclick="rd.showModal()">Create Account</button>
+    <p style="text-align:center;font-style:italic;color:var(--navy);margin-top:30px">{{ tagline }}</p>
+  </div>
+</div>
+
+<dialog id="rd" style="border:1px solid var(--line);padding:24px;width:340px;background:var(--bg)">
+  <label style="margin-top:0">I am a</label>
+  <select id="rr" onchange="xl.textContent=this.value=='Student'?'Student No.':'Teacher Access Code'">
+    <option>Student</option><option>Teacher</option></select>
+  <label>Full Name</label><input id="rf">
+  <label>Username</label><input id="ru">
+  <label>Password</label><input id="rp" type="password">
+  <label>Confirm Password</label><input id="rc" type="password">
+  <label id="xl">Student No.</label><input id="rx">
+  <div class="err" id="re"></div>
+  <button class="btn red" style="width:100%" onclick="reg()">REGISTER</button>
+  <button class="btn blue" style="width:100%;margin-top:6px" onclick="rd.close()">Cancel</button>
+</dialog>
+{% endblock %}
+{% block script %}
+<script>
+const $=id=>document.getElementById(id);
+async function login(){
+  const {ok,data}=await api("/api/login","POST",{username:$("lu").value,password:$("lp").value});
+  if(ok)location.href=data.redirect;else $("le").textContent=data.error;
+}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&!$("rd").open)login();});
+async function reg(){
+  const {ok,data}=await api("/api/register","POST",{role:$("rr").value,full_name:$("rf").value,
+    username:$("ru").value,password:$("rp").value,confirm:$("rc").value,extra:$("rx").value});
+  if(!ok){$("re").textContent=data.error;return;}
+  alert("Account created! You can now log in.");$("lu").value=$("ru").value;$("rd").close();
+}
+</script>
+{% endblock %}

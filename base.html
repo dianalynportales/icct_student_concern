@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{% endblock %} - ICCT Student Concern System</title>
+<link rel="icon" href="/logo/icct_sm.png">
+<style>
+:root{--navy:#0B2A6B;--red:#D22030;--gold:#F6B90F;--dgold:#C98F00;--green:#2E8B57;--bg:#F3F5FA;--text:#1B2440;--line:#D5DBEA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px "Segoe UI",system-ui,sans-serif}
+.hdr{background:var(--navy);color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px;flex-wrap:wrap}
+.hdr img{height:50px}.hdr h1{margin:0;font-size:20px}.hdr small{color:var(--gold);display:block}
+.hdr .r{margin-left:auto;text-align:right}.hdr .r b{font-size:15px}
+.stripe{height:4px;background:var(--gold)}
+.wrap{max-width:1000px;margin:0 auto;padding:12px}
+.btn{border:0;border-radius:4px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer;color:#fff;text-decoration:none;display:inline-block}
+.red{background:var(--red)}.red:hover{background:#A8141F}
+.blue{background:var(--navy)}.blue:hover{background:#081D4A}
+.goldb{background:var(--gold);color:var(--navy)}.goldb:hover{background:#E0A600}
+.card{background:#fff;border:1px solid var(--line);padding:16px}
+input,select,textarea{width:100%;padding:8px;border:1px solid #aab3cc;border-radius:3px;font:inherit}
+label{display:block;margin:8px 0 2px}
+h2{color:var(--navy);margin:14px 0 6px;font-size:18px}
+.tabs{display:flex;gap:2px;margin-bottom:12px}
+.tabs button{padding:9px 20px;border:0;background:#DCE2F1;color:var(--navy);font-weight:700;cursor:pointer;font:inherit;font-weight:700}
+.tabs button.on{background:var(--navy);color:#fff}
+.pane{display:none}.pane.on{display:block}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:#fff}
+th{background:var(--navy);color:#fff;text-align:left;padding:8px}
+td{padding:7px 8px;border-bottom:1px solid var(--line)}
+tbody tr{cursor:pointer}
+tbody tr.sel td{background:var(--gold)!important;color:var(--navy)}
+.Pending td{background:#FDE3E5}.In-Progress td{background:#FFF3CC}.Resolved td{background:#DDF3E6}
+.box{background:#fff;border:1px solid var(--line);padding:10px;white-space:pre-wrap;min-height:60px}
+.err{color:var(--red);min-height:18px;margin-top:6px}
+</style></head>
+<body>
+{% if user %}
+<div class="hdr">
+  <img src="/logo/icct_sm.png" alt=""><img src="/logo/ccs_sm.png" alt="">
+  <div><h1>Student Concern System</h1><small>ICCT Colleges Foundation Inc. | College of Computer Studies</small></div>
+  <div class="r"><b>{{ user.full_name }}</b><small>{{ user.role }}</small>
+    <a class="btn goldb" href="/logout" style="padding:5px 14px;margin-top:4px">Logout</a></div>
+</div><div class="stripe"></div>
+{% endif %}
+{% block body %}{% endblock %}
+<script>
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cls=s=>s.replace(/ /g,"-");
+async function api(url,method="GET",body){
+  const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401&&!url.includes("login")){location.href="/";}
+  return {ok:r.ok,data:d};
+}
+function tabs(onChange){
+  document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".tabs button,.pane").forEach(e=>e.classList.remove("on"));
+    b.classList.add("on");document.getElementById(b.dataset.t).classList.add("on");onChange&&onChange(b.dataset.t);});
+}
+</script>
+{% block script %}{% endblock %}
+</body></html>

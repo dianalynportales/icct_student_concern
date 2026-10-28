@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ user.full_name }} (Student){% endblock %}
+{% block body_pre %}{% endblock %}
+{% block body %}
+<div class="wrap">
+  <div class="tabs">
+    <button class="on" data-t="t1">Submit Concern</button>
+    <button data-t="t2">My Concerns</button>
+    <button data-t="t3">Ask AI</button>
+  </div>
+
+  <div class="pane on" id="t1">
+    <div class="card" style="max-width:820px;margin:6px auto">
+      <div style="font-size:20px;font-weight:700;color:var(--navy)">Send a Concern</div>
+      <div style="color:var(--red);margin-bottom:8px">{{ user.full_name }} &nbsp;|&nbsp; Student No: {{ user.student_no }}</div>
+      <label>Concern Title</label><input id="title">
+      <label>Description</label><textarea id="desc" rows="6"></textarea>
+      <div class="err" id="serr"></div>
+      <button class="btn red" id="sbtn" onclick="submitConcern()">SUBMIT CONCERN</button>
+    </div>
+    <div style="max-width:820px;margin:0 auto">
+      <h2>AI Assistant Reply</h2>
+      <div id="cat" style="color:var(--red);font-weight:700"></div>
+      <div class="box" id="reply" style="min-height:150px">After you submit your concern, the AI will answer here.</div>
+    </div>
+  </div>
+
+  <div class="pane" id="t2">
+    <div class="tw"><table><thead><tr><th>Id</th><th>Title</th><th>Category</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody id="mine"></tbody></table></div>
+    <h2>Details, AI Reply and Teacher's Remarks</h2>
+    <div class="box" id="detail" style="min-height:170px"></div>
+  </div>
+
+  <div class="pane" id="t3">
+    <div style="font-size:20px;font-weight:700;color:var(--navy)">Ask the AI Assistant</div>
+    <p>Have a quick question? Type it here. This is not saved as a concern.</p>
+    <div style="display:flex;gap:8px"><input id="q" onkeydown="if(event.key==='Enter')ask()">
+      <button class="btn red" onclick="ask()">Ask</button></div>
+    <div class="box" id="ans" style="margin-top:10px;min-height:300px"></div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const $=id=>document.getElementById(id);
+let mine=[];
+tabs(t=>{if(t==="t2")loadMine();});
+
+async function submitConcern(){
+  $("serr").textContent="";$("sbtn").disabled=true;document.body.style.cursor="wait";
+  const {ok,data}=await api("/api/submit","POST",{title:$("title").value,description:$("desc").value});
+  $("sbtn").disabled=false;document.body.style.cursor="";
+  if(!ok){$("serr").textContent=data.error;return;}
+  $("cat").textContent="Category chosen by the AI: "+data.category;
+  $("reply").textContent=data.reply;$("title").value="";$("desc").value="";loadMine();
+}
+async function loadMine(){
+  const {data}=await api("/api/my");mine=data;
+  $("mine").innerHTML=data.map(r=>`<tr class="${cls(r.status)}" data-id="${r.id}"><td>${r.id}</td><td>${esc(r.title)}</td>
+    <td>${esc(r.category)}</td><td>${esc(r.status)}</td><td>${esc(r.date_created)}</td></tr>`).join("");
+  $("mine").querySelectorAll("tr").forEach(tr=>tr.onclick=()=>{
+    $("mine").querySelectorAll("tr").forEach(x=>x.classList.remove("sel"));tr.classList.add("sel");
+    const r=mine.find(x=>x.id==tr.dataset.id);
+    $("detail").textContent="Your concern:\n"+r.description+"\n\nAI reply:\n"+r.ai_reply+
+      "\n\nTeacher's remarks:\n"+(r.remarks||"(no remarks yet)");});
+}
+async function ask(){
+  const q=$("q").value.trim();if(!q)return;
+  document.body.style.cursor="wait";
+  const {data}=await api("/api/ask","POST",{question:q});document.body.style.cursor="";
+  $("ans").textContent="You: "+q+"\n\nAI Assistant ("+data.category+"):\n"+data.answer;$("q").value="";
+}
+loadMine();
+</script>
+{% endblock %}

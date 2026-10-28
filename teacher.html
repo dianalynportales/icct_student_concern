@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ user.full_name }} (Teacher){% endblock %}
+{% block body %}
+<div class="wrap">
+  <div class="tabs">
+    <button class="on" data-t="t1">Dashboard</button>
+    <button data-t="t2">Manage Concerns</button>
+    <button data-t="t3">Reports</button>
+  </div>
+
+  <div class="pane on" id="t1">
+    <div style="display:flex;gap:12px;flex-wrap:wrap" id="counts"></div>
+    <h2 style="margin-top:20px">Concerns per Category</h2>
+    <div class="card" id="chart"></div>
+  </div>
+
+  <div class="pane" id="t2">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <b style="color:var(--navy)">Search:</b><input id="search" style="max-width:280px" oninput="load()"></div>
+    <div class="tw" style="max-height:280px;overflow-y:auto"><table>
+      <thead><tr><th>Id</th><th>Student</th><th>Title</th><th>Category</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody id="rows"></tbody></table></div>
+    <div class="card" style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
+      <div style="flex:2;min-width:260px"><b>Concern and AI reply</b>
+        <div class="box" id="detail" style="height:170px;overflow-y:auto;background:#F7F8FC"></div></div>
+      <div style="flex:1;min-width:240px">
+        <div style="display:flex;gap:10px">
+          <div style="flex:1"><label style="margin-top:0">Category</label>
+            <select id="cat">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+          <div style="flex:1"><label style="margin-top:0">Status</label>
+            <select id="status">{% for s in statuses %}<option>{{ s }}</option>{% endfor %}</select></div>
+        </div>
+        <label>Remarks for the student</label><input id="remarks">
+        <div style="text-align:right;margin-top:10px">
+          <button class="btn red" onclick="save()">Save Changes</button>
+          <button class="btn blue" onclick="del()">Delete</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="t3">
+    <button class="btn blue" onclick="loadSummary()">Refresh</button>
+    <a class="btn goldb" href="/export.csv" style="margin-left:8px">Export CSV</a>
+    <pre class="box" id="report" style="font:14px Consolas,monospace;min-height:400px;margin-top:10px"></pre>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const $=id=>document.getElementById(id);
+let list=[],selected=null;
+tabs(refreshAll);
+
+async function loadSummary(){
+  const {data}=await api("/api/summary");
+  const cards=[["Total",data.total,"var(--navy)"],["Pending",data.statuses["Pending"],"var(--red)"],
+    ["In Progress",data.statuses["In Progress"],"var(--dgold)"],["Resolved",data.statuses["Resolved"],"var(--green)"]];
+  $("counts").innerHTML=cards.map(([n,v,c])=>`<div class="card" style="flex:1;min-width:140px;padding:0;text-align:center">
+    <div style="height:6px;background:${c}"></div><div style="font-size:30px;font-weight:700;color:${c};margin-top:10px">${v}</div>
+    <div style="font-weight:700;margin-bottom:12px">${n}</div></div>`).join("");
+  const big=Math.max(1,...data.chart.map(x=>x[1]));
+  $("chart").innerHTML=data.chart.map(([n,v],i)=>`<div style="display:flex;align-items:center;margin:7px 0">
+    <div style="width:150px">${esc(n)}</div>
+    <div style="height:24px;background:${i%2?"var(--red)":"var(--navy)"};width:${Math.max(v/big*75,0.5)}%"></div>
+    <b style="color:var(--navy);margin-left:8px">${v}</b></div>`).join("");
+  $("report").textContent=data.report;
+}
+async function load(){
+  const {data}=await api("/api/concerns?q="+encodeURIComponent($("search").value.trim()));list=data;
+  $("rows").innerHTML=data.map(r=>`<tr class="${cls(r.status)}${r.id===selected?" sel":""}" data-id="${r.id}"><td>${r.id}</td>
+    <td>${esc(r.student_name)}</td><td>${esc(r.title)}</td><td>${esc(r.category)}</td><td>${esc(r.status)}</td>
+    <td>${esc(r.date_created)}</td></tr>`).join("");
+  $("rows").querySelectorAll("tr").forEach(tr=>tr.onclick=()=>pick(+tr.dataset.id));
+}
+function pick(id){
+  selected=id;const r=list.find(x=>x.id===id);if(!r)return;
+  $("rows").querySelectorAll("tr").forEach(t=>t.classList.toggle("sel",+t.dataset.id===id));
+  $("detail").textContent=r.description+"\n\n--- AI reply ---\n"+r.ai_reply;
+  $("cat").value=r.category;$("status").value=r.status;$("remarks").value=r.remarks||"";
+}
+async function save(){
+  if(selected===null)return alert("Please select a concern first.");
+  await api("/api/concern/"+selected,"POST",{category:$("cat").value,status:$("status").value,remarks:$("remarks").value});
+  await refreshAll();alert("Concern updated.");
+}
+async function del(){
+  if(selected===null)return alert("Please select a concern first.");
+  if(!confirm("Delete this concern?"))return;
+  await api("/api/concern/"+selected,"DELETE");selected=null;$("detail").textContent="";refreshAll();
+}
+function refreshAll(){loadSummary();load();}
+refreshAll();
+</script>
+{% endblock %}
